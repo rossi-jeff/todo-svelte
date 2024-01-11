@@ -25,6 +25,13 @@
  */
 
 /**
+ * @typedef LoginResponse
+ * @type {object}
+ * @property {string} UserName
+ * @property {string} Token
+ */
+
+/**
  * @typedef Session
  * @type {object}
  * @property {boolean} SignedIn

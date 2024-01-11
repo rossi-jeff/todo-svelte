@@ -1,8 +1,16 @@
 <script>
+	export let data;
 	import TopBar from './top-bar.svelte';
 	import BottomBar from './bottom-bar.svelte';
 	import Dialogs from './dialogs.svelte';
 	import * as Payloads from '$lib/payloads';
+	import * as Types from '$lib/types';
+	import { baseUrl, buildHeaders } from '$lib';
+	import { blankSession, userSession } from '$lib/session.store';
+	import { get } from 'svelte/store';
+
+	const { userNames } = data;
+	let session = get(userSession);
 
 	const openOverlay = () => {
 		const overlay = document.getElementById('modal-overlay');
@@ -42,16 +50,40 @@
 		/** @type Payloads.SignIn */
 		const credentials = event.detail;
 		const { UserName, PassWord } = credentials;
-		console.log({ UserName, PassWord });
-		closeDialog('sign-in-dialog');
+		fetch(`${baseUrl}/auth/login`, {
+			method: 'POST',
+			body: JSON.stringify({ UserName, PassWord }),
+			headers: buildHeaders()
+		})
+			.then((result) => result.json())
+			.then((result) => {
+				/** @type Types.LoginResponse */
+				const body = result;
+				const { Token, UserName } = body;
+				userSession.set({ UserName, Token, SignedIn: true });
+				session = get(userSession);
+				closeDialog('sign-in-dialog');
+			});
 	};
 
 	const randomSignIn = (/** @type {{ detail: Payloads.SignIn; }} */ event) => {
 		/** @type Payloads.SignIn */
 		const credentials = event.detail;
 		const { UserName, PassWord } = credentials;
-		console.log({ UserName, PassWord });
-		closeDialog('random-dialog');
+		fetch(`${baseUrl}/auth/login`, {
+			method: 'POST',
+			body: JSON.stringify({ UserName, PassWord }),
+			headers: buildHeaders()
+		})
+			.then((result) => result.json())
+			.then((result) => {
+				/** @type Types.LoginResponse */
+				const body = result;
+				const { Token, UserName } = body;
+				userSession.set({ UserName, Token, SignedIn: true });
+				session = get(userSession);
+				closeDialog('random-dialog');
+			});
 	};
 
 	const register = (/** @type {{ detail: Payloads.Register; }} */ event) => {
@@ -61,10 +93,21 @@
 		console.log({ UserName, PassWord, Email });
 		closeDialog('register-dialog');
 	};
+
+	const signOut = () => {
+		userSession.set(blankSession);
+		session = get(userSession);
+	};
 </script>
 
 <div class="flex flex-col max-h-screen h-screen m-0 p-2">
-	<TopBar on:openRandom={openRandom} on:openRegister={openRegister} on:openSignIn={openSignIn} />
+	<TopBar
+		on:openRandom={openRandom}
+		on:openRegister={openRegister}
+		on:openSignIn={openSignIn}
+		on:signOut={signOut}
+		{session}
+	/>
 
 	<Dialogs
 		on:closeRandom={closeRandom}
@@ -73,6 +116,7 @@
 		on:signIn={signIn}
 		on:randomSignIn={randomSignIn}
 		on:register={register}
+		{userNames}
 	/>
 
 	<div class="flex-grow overflow-y-auto">Content</div>

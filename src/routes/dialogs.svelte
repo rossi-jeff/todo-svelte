@@ -3,6 +3,7 @@
 	import RandomDialog from './random-dialog.svelte';
 	import RegisterDialog from './register-dialog.svelte';
 	import SignInDialog from './sign-in-dialog.svelte';
+	export let /** @type {Array.<string>} */ userNames;
 
 	const dispatch = createEventDispatcher();
 
@@ -22,5 +23,5 @@
 <div class="modal-overlay" id="modal-overlay">
 	<SignInDialog on:cancel={closeSignIn} on:signIn={signIn} />
 	<RegisterDialog on:cancel={closeRegister} on:register={register} />
-	<RandomDialog on:cancel={closeRandom} on:signIn={randomSignIn} />
+	<RandomDialog on:cancel={closeRandom} on:signIn={randomSignIn} {userNames} />
 </div>
