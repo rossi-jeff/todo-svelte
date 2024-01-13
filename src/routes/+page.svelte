@@ -8,9 +8,17 @@
 	import { baseUrl, buildHeaders } from '$lib';
 	import { blankSession, userSession } from '$lib/session.store';
 	import { get } from 'svelte/store';
+	import TodoCard from './todo-card.svelte';
+	import UserControls from './user-controls.svelte';
 
 	const { userNames } = data;
 	let session = get(userSession);
+
+	/** @type {Array.<Types.Todo>}*/
+	let todos = [];
+
+	/** @type {?Types.User}*/
+	let currentUser = null;
 
 	const openOverlay = () => {
 		const overlay = document.getElementById('modal-overlay');
@@ -47,13 +55,11 @@
 	const closeRandom = () => closeDialog('random-dialog');
 
 	const signIn = (/** @type {{ detail: Payloads.SignIn; }} */ event) => {
-		/** @type Payloads.SignIn */
-		const credentials = event.detail;
-		const { UserName, PassWord } = credentials;
+		const { UserName, PassWord } = event.detail;
 		fetch(`${baseUrl}/auth/login`, {
 			method: 'POST',
 			body: JSON.stringify({ UserName, PassWord }),
-			headers: buildHeaders()
+			headers: buildHeaders(blankSession)
 		})
 			.then((result) => result.json())
 			.then((result) => {
@@ -62,18 +68,18 @@
 				const { Token, UserName } = body;
 				userSession.set({ UserName, Token, SignedIn: true });
 				session = get(userSession);
+				loadTodos();
+				loadCurrentUser();
 				closeDialog('sign-in-dialog');
 			});
 	};
 
 	const randomSignIn = (/** @type {{ detail: Payloads.SignIn; }} */ event) => {
-		/** @type Payloads.SignIn */
-		const credentials = event.detail;
-		const { UserName, PassWord } = credentials;
+		const { UserName, PassWord } = event.detail;
 		fetch(`${baseUrl}/auth/login`, {
 			method: 'POST',
 			body: JSON.stringify({ UserName, PassWord }),
-			headers: buildHeaders()
+			headers: buildHeaders(blankSession)
 		})
 			.then((result) => result.json())
 			.then((result) => {
@@ -82,14 +88,14 @@
 				const { Token, UserName } = body;
 				userSession.set({ UserName, Token, SignedIn: true });
 				session = get(userSession);
+				loadTodos();
+				loadCurrentUser();
 				closeDialog('random-dialog');
 			});
 	};
 
 	const register = (/** @type {{ detail: Payloads.Register; }} */ event) => {
-		/** @type Payloads.Register */
-		const credentials = event.detail;
-		const { UserName, PassWord, Email } = credentials;
+		const { UserName, PassWord, Email } = event.detail;
 		console.log({ UserName, PassWord, Email });
 		closeDialog('register-dialog');
 	};
@@ -97,6 +103,116 @@
 	const signOut = () => {
 		userSession.set(blankSession);
 		session = get(userSession);
+		todos = [];
+		currentUser = null;
+	};
+
+	const loadTodos = () => {
+		fetch(`${baseUrl}/todo`, { headers: buildHeaders(session) })
+			.then((result) => result.json())
+			.then((/** @type {Array.<Types.Todo>}*/ result) => {
+				todos = result;
+			});
+	};
+
+	const loadCurrentUser = () => {
+		fetch(`${baseUrl}/user/current`, { headers: buildHeaders(session) })
+			.then((result) => result.json())
+			.then((/** @type Types.User */ result) => {
+				currentUser = result;
+			});
+	};
+
+	const getTodoByID = (/** @type {string} */ Id) => {
+		for (const todo of todos) {
+			if (todo.Id == Id) return todo;
+		}
+		return null;
+	};
+
+	const updateTodo = (/** @type {{ Id: string; Completed: boolean; Task: string; }} */ args) => {
+		const { Id, Completed, Task } = args;
+		fetch(`${baseUrl}/todo/${Id}`, {
+			method: 'PATCH',
+			body: JSON.stringify({ Task, Completed }),
+			headers: buildHeaders(session)
+		}).then(() => loadTodos());
+	};
+
+	const setCompleted = (/** @type {{ detail: Payloads.SetCompleted; }} */ event) => {
+		const { Id, Completed } = event.detail;
+		const todo = getTodoByID(Id);
+		if (!todo) return;
+		const { Task } = todo;
+		updateTodo({ Id, Completed, Task });
+	};
+
+	const updateTask = (/** @type {{ detail: Payloads.UpdateTask; }} */ event) => {
+		const { Id, Task } = event.detail;
+		const todo = getTodoByID(Id);
+		if (!todo) return;
+		const { Completed } = todo;
+		updateTodo({ Id, Completed, Task });
+	};
+
+	const deleteTodo = (/** @type {{ detail: { Id: string; }; }} */ event) => {
+		const { Id } = event.detail;
+		fetch(`${baseUrl}/todo/${Id}`, {
+			method: 'DELETE',
+			headers: buildHeaders(session)
+		}).then(() => loadTodos());
+	};
+
+	const openNewTodo = () => openDialog('new-todo-dialog');
+
+	const closeNewTodo = () => closeDialog('new-todo-dialog');
+
+	const addTodo = (/** @type {{ detail: Payloads.NewTodo; }} */ event) => {
+		const { Task, Completed } = event.detail;
+		fetch(`${baseUrl}/todo`, {
+			method: 'POST',
+			body: JSON.stringify({ Task, Completed }),
+			headers: buildHeaders(session)
+		}).then(() => {
+			loadTodos();
+			closeDialog('new-todo-dialog');
+		});
+	};
+
+	const openEditUser = () => openDialog('edit-user-dialog');
+
+	const closeEditUser = () => closeDialog('edit-user-dialog');
+
+	const updateUser = (/** @type {{ detail: { UserName: string; Email: string; }; }} */ event) => {
+		const { UserName, Email } = event.detail;
+		if (!currentUser) return;
+		const { Id } = currentUser;
+		fetch(`${baseUrl}/user/${Id}`, {
+			method: 'PATCH',
+			body: JSON.stringify({ UserName, Email }),
+			headers: buildHeaders(session)
+		}).then(() => {
+			loadCurrentUser();
+			closeDialog('edit-user-dialog');
+		});
+	};
+
+	const openChangePassWord = () => openDialog('change-pass-word-dialog');
+
+	const closeChangePassWord = () => closeDialog('change-pass-word-dialog');
+
+	const changePassWord = (
+		/** @type {{ detail: { OldPassWord: string; NewPassWord: string; Confirmation: string; }; }} */ event
+	) => {
+		const { OldPassWord, NewPassWord, Confirmation } = event.detail;
+		fetch(`${baseUrl}/user/change`, {
+			method: 'PATCH',
+			body: JSON.stringify({}),
+			headers: buildHeaders(session)
+		}).then(() => {
+			signOut();
+			closeDialog('change-pass-word-dialog');
+		});
 	};
 </script>
 
@@ -116,10 +232,40 @@
 		on:signIn={signIn}
 		on:randomSignIn={randomSignIn}
 		on:register={register}
+		on:closeNewTodo={closeNewTodo}
+		on:addTodo={addTodo}
+		on:closeEditUser={closeEditUser}
+		on:updateUser={updateUser}
+		on:closeChangePassWord={closeChangePassWord}
+		on:changePassWord={changePassWord}
 		{userNames}
+		{currentUser}
 	/>
 
-	<div class="flex-grow overflow-y-auto">Content</div>
+	<div class="flex-grow overflow-y-auto">
+		{#if session.SignedIn}
+			<div>
+				{#if currentUser && !currentUser.Random}
+					<UserControls
+						userName={currentUser.UserName}
+						on:openEditUser={openEditUser}
+						on:openChangePassWord={openChangePassWord}
+					/>
+				{/if}
+				<button on:click={openNewTodo}>New Todo</button>
+				{#each todos as todo}
+					<TodoCard
+						{todo}
+						on:setCompleted={setCompleted}
+						on:updateTask={updateTask}
+						on:deleteTodo={deleteTodo}
+					/>
+				{/each}
+			</div>
+		{:else}
+			<div>Welcome</div>
+		{/if}
+	</div>
 
 	<BottomBar />
 </div>
