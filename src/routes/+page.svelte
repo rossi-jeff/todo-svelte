@@ -216,7 +216,7 @@
 	};
 </script>
 
-<div class="flex flex-col max-h-screen h-screen m-0 p-2">
+<main id="main" class="page-wrapper">
 	<TopBar
 		on:openRandom={openRandom}
 		on:openRegister={openRegister}
@@ -252,7 +252,7 @@
 						on:openChangePassWord={openChangePassWord}
 					/>
 				{/if}
-				<button on:click={openNewTodo}>New Todo</button>
+				<button on:click={openNewTodo} class="my-2">New Todo</button>
 				{#each todos as todo}
 					<TodoCard
 						{todo}
@@ -268,4 +268,4 @@
 	</div>
 
 	<BottomBar />
-</div>
+</main>

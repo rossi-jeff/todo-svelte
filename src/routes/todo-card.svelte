@@ -23,7 +23,7 @@
 	};
 </script>
 
-<div class="flex mb-2">
+<div class="todo-card">
 	<div>
 		<input
 			type="checkbox"
