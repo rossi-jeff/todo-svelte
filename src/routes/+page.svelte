@@ -157,10 +157,12 @@
 
 	const deleteTodo = (/** @type {{ detail: { Id: string; }; }} */ event) => {
 		const { Id } = event.detail;
-		fetch(`${baseUrl}/todo/${Id}`, {
-			method: 'DELETE',
-			headers: buildHeaders(session)
-		}).then(() => loadTodos());
+		if (confirm('Are you sure?')) {
+			fetch(`${baseUrl}/todo/${Id}`, {
+				method: 'DELETE',
+				headers: buildHeaders(session)
+			}).then(() => loadTodos());
+		}
 	};
 
 	const openNewTodo = () => openDialog('new-todo-dialog');
@@ -216,6 +218,10 @@
 	};
 </script>
 
+<svelte:head>
+	<title>ToDo App in Svelte</title>
+</svelte:head>
+
 <main id="main" class="page-wrapper">
 	<TopBar
 		on:openRandom={openRandom}
@@ -263,7 +269,17 @@
 				{/each}
 			</div>
 		{:else}
-			<div>Welcome</div>
+			<div>
+				<h2>Welcome</h2>
+				<div class="mb-4">
+					This site is a todo list application. Authentication is used so that each
+					user will only see their own todos.
+				</div>
+				<div>
+					For those who wish to avoid entering any personal information an option to
+					log in as a randomly generated user has been provided.
+				</div>
+			</div>
 		{/if}
 	</div>
 

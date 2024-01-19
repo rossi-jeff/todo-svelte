@@ -35,7 +35,7 @@ button:hover {
 }
 
 .todo-card {
-	@apply flex py-1 px-2 odd:bg-green-700 odd:text-white;
+	@apply flex py-1 px-2 even:bg-green-700 even:text-white even:rounded;
 }
 
 .todo-card button {
